@@ -31,7 +31,7 @@ def send_push(title, body):
     payload = {"title": title, "body": body, "sound": "1"}
     try:
         res = requests.post(PUSH_URL, headers=HEADERS, json=payload, timeout=10)
-        print("Push sent:", res.status_code)
+        print("Push sent:", res.status_code, res.text)
     except Exception as e:
         print("Push failed:", e)
 
