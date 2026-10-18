@@ -153,7 +153,8 @@ def main():
                     f"Price: {price_txt}\n"
                     f"Strength: {ob_pct(ob)}\n"
                     f"Time: {when.strftime('%Y-%m-%d %H:%M')} UTC\n"
-                    f"Nearby: OB below {ob_pct(below)} | OB above {ob_pct(above)}"
+                    "Trade responsibly by Rouie"
+                )
                 )
                 print(title)
                 print(body)
