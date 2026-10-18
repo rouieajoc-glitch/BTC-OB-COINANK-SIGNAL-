@@ -1,0 +1,34 @@
+name: BTC 1H OB Signal
+
+on:
+  schedule:
+    - cron: "2 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: Run signal
+        run: python signal_1h.py
+        env:
+          COINANK_API_KEY: ${{ secrets.COINANK_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Save state
+        run: |
+          [ -f seen_1h.json ] || exit 0
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add seen_1h.json
+          git commit -m "update 1h state" || exit 0
+          git pull --rebase
+          git push
