@@ -8,7 +8,7 @@ SYMBOL = "BTCUSDT"
 INTERVAL = "4h"
 STATE_FILE = "seen.json"
 PH_TZ = timezone(timedelta(hours=8))
-MAX_AGE_HOURS = 100000   # only alert on blocks formed within this many hours
+MAX_AGE_HOURS = 12   # only alert on blocks formed within this many hours
 MAX_KEEP = 500       # how many past block times to remember per side
 
 HEADERS = {"apikey": API_KEY}
@@ -121,8 +121,8 @@ def main():
             title = f"{icon} New {label} OB Alert (BTC 4H)"
             body = (
                 f"Price: {price_txt}\n"
-                f"Time: {when.strftime('%Y-%m-%d %H:%M')} PHT\n"
-                f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %H:%M')} PHT\n"
+                f"Time: {when.strftime('%Y-%m-%d %I:%M %p')} PHT\n"
+                f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %I:%M %p')} PHT\n"
                 "Trade responsibly by Rouie"
             )
             print(title)
