@@ -1,12 +1,12 @@
 import json
 import os
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 API_KEY = os.environ["COINANK_API_KEY"]
 SYMBOL = "BTCUSDT"
 INTERVAL = "4h"
-STATE_FILE = "seen.json"
+STATE_FILE = "seen.json"PH_TZ = timezone(timedelta(hours=8))
 
 HEADERS = {"apikey": API_KEY}
 SMC_URL = "https://open-api.coinank.com/api/indicator/smc"
@@ -146,13 +146,13 @@ def main():
                     price = get_price()
                     price_loaded = True
                 below, above = nearest(data, price)
-                when = datetime.fromtimestamp(ts / 1000, timezone.utc)
+                when = datetime.fromtimestamp(ts / 1000, PH_TZ)
                 price_txt = f"{price:,.1f}" if price else "n/a"
                 title = f"{icon} New {label} OB Alert (BTC 4H)"
                 body = (
                     f"Price: {price_txt}\n"
                     f"Strength: {ob_pct(ob)}\n"
-                    f"Time: {when.strftime('%Y-%m-%d %H:%M')} UTC\n"
+                    f"Time: {when.strftime('%Y-%m-%d %H:%M')} PST\n"
                     "Trade responsibly by Rouie"
                 )
                 print(title)
