@@ -8,7 +8,7 @@ API_KEY = os.environ["COINANK_API_KEY"]
 SYMBOL = "BTCUSDT"
 
 # timeframe -> only alert on blocks formed within this many hours
-INTERVALS = {"4h": 1000, "1d": 1000}
+INTERVALS = {"4h": 12, "1d": 48}
 
 STATE_FILE = "seen.json"
 PH_TZ = timezone(timedelta(hours=8))
