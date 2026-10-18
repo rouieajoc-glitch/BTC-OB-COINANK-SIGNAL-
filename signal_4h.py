@@ -65,6 +65,25 @@ def send_push(title, body):
             print("Telegram failed:", e)
 
 
+def zone_text(ob, price):
+    """Return (zone line, distance line) for an order block."""
+    h, l = ob.get("h"), ob.get("l")
+    if h is None or l is None:
+        return None, None
+    zone = f"Zone: {l:,.1f} - {h:,.1f}"
+    if not price:
+        return zone, None
+    if l <= price <= h:
+        dist = "Distance: price is inside the zone"
+    elif price > h:
+        pct = (price - h) / price * 100
+        dist = f"Distance: {pct:.2f}% below price"
+    else:
+        pct = (l - price) / price * 100
+        dist = f"Distance: {pct:.2f}% above price"
+    return zone, dist
+
+
 def load_state():
     if os.path.exists(STATE_FILE):
         try:
@@ -119,8 +138,11 @@ def main():
             when = datetime.fromtimestamp(ts / 1000, PH_TZ)
             price_txt = f"{price:,.1f}" if price else "n/a"
             title = f"{icon} New {label} OB Alert (BTC 4H)"
+            zone, dist = zone_text(ob, price)
+            extra = "".join(f"{x}\n" for x in (zone, dist) if x)
             body = (
                 f"Price: {price_txt}\n"
+                f"{extra}"
                 f"Time: {when.strftime('%Y-%m-%d %I:%M %p')} PHT\n"
                 f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %I:%M %p')} PHT\n"
                 "Trade responsibly by Rouie"
