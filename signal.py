@@ -28,12 +28,27 @@ def get_smc_data():
 
 
 def send_push(title, body):
+    # CoinAnk app push
     payload = {"title": title, "body": body, "sound": "1"}
     try:
         res = requests.post(PUSH_URL, headers=HEADERS, json=payload, timeout=10)
         print("Push sent:", res.status_code, res.text)
     except Exception as e:
         print("Push failed:", e)
+
+    # Telegram push
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if token and chat_id:
+        try:
+            r = requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": f"{title}\n{body}"},
+                timeout=10,
+            )
+            print("Telegram sent:", r.status_code)
+        except Exception as e:
+            print("Telegram failed:", e)
 
 
 def strength(ob):
