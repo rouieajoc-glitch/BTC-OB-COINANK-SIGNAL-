@@ -13,8 +13,6 @@ HEADERS = {"apikey": API_KEY}
 SMC_URL = "https://open-api.coinank.com/api/indicator/smc"
 PUSH_URL = "https://open-api.coinank.com/api/webhook/push"
 
-PCT_KEYS = ("percent", "pct", "ratio", "volPercent", "volumePercent", "strength", "score")
-
 
 def get_smc_data():
     params = {"symbol": SYMBOL, "interval": INTERVAL, "exchange": "Binance"}
@@ -63,16 +61,6 @@ def send_push(title, body):
             print("Telegram sent:", r.status_code)
         except Exception as e:
             print("Telegram failed:", e)
-
-
-def ob_pct(ob):
-    if not ob:
-        return "n/a"
-    for k in PCT_KEYS:
-        v = ob.get(k)
-        if isinstance(v, (int, float)):
-            return f"{v:g}%"
-    return "n/a"
 
 
 def is_active(ob):
@@ -134,8 +122,8 @@ def main():
     price_loaded = False
 
     for key, icon, label in (
-        ("bullish", "🟢", "Bullish"),
-        ("bearish", "🔴", "Bearish"),
+        ("bullish", "\U0001f7e2", "Bullish"),
+        ("bearish", "\U0001f534", "Bearish"),
     ):
         for ob in data.get(f"{key}OB", []):
             ts = ob.get("ts")
@@ -152,7 +140,6 @@ def main():
                 title = f"{icon} New {label} OB Alert (BTC 4H)"
                 body = (
                     f"Price: {price_txt}\n"
-                    f"Strength: {ob_pct(ob)}\n"
                     f"Time: {when.strftime('%Y-%m-%d %H:%M')} PST\n"
                     f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %H:%M')} PST\n"
                     "Trade responsibly by Rouie"
