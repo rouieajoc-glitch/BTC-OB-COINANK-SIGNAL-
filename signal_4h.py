@@ -8,6 +8,8 @@ SYMBOL = "BTCUSDT"
 INTERVAL = "4h"
 STATE_FILE = "seen.json"
 PH_TZ = timezone(timedelta(hours=8))
+MAX_AGE_HOURS = 12   # only alert on blocks formed within this many hours
+MAX_KEEP = 500       # how many past block times to remember per side
 
 HEADERS = {"apikey": API_KEY}
 SMC_URL = "https://open-api.coinank.com/api/indicator/smc"
@@ -63,33 +65,13 @@ def send_push(title, body):
             print("Telegram failed:", e)
 
 
-def is_active(ob):
-    for k in ("mitigated", "isMitigated", "filled", "broken"):
-        if ob.get(k):
-            return False
-    return True
-
-
-def nearest(data, price):
-    if price is None:
-        return None, None
-    below = [
-        o for o in data.get("bullishOB", [])
-        if is_active(o) and o.get("h", 0) <= price
-    ]
-    above = [
-        o for o in data.get("bearishOB", [])
-        if is_active(o) and o.get("l", 0) >= price
-    ]
-    b = max(below, key=lambda o: o["h"], default=None)
-    a = min(above, key=lambda o: o["l"], default=None)
-    return b, a
-
-
 def load_state():
     if os.path.exists(STATE_FILE):
-        with open(STATE_FILE) as f:
-            return json.load(f)
+        try:
+            with open(STATE_FILE) as f:
+                return json.load(f)
+        except Exception as e:
+            print("State read failed:", e)
     return None
 
 
@@ -103,19 +85,13 @@ def main():
     if not data:
         return
 
-    # DEBUG: shows what fields CoinAnk returns (remove later)
-    print("DEBUG keys:", list(data.keys()))
-    for key in ("bullishOB", "bearishOB"):
-        items = data.get(key, [])
-        print("DEBUG", key, "count:", len(items))
-        if items:
-            print("DEBUG first:", json.dumps(items[0]))
-            print("DEBUG last:", json.dumps(items[-1]))
-
     state = load_state()
     first_run = state is None
     if first_run:
         state = {"bullish": [], "bearish": []}
+
+    now_ms = datetime.now(timezone.utc).timestamp() * 1000
+    max_age_ms = MAX_AGE_HOURS * 3600 * 1000
 
     new_state = {"bullish": [], "bearish": []}
     price = None
@@ -125,28 +101,34 @@ def main():
         ("bullish", "\U0001f7e2", "Bullish"),
         ("bearish", "\U0001f534", "Bearish"),
     ):
+        # permanent memory: keep everything ever seen, add what is current
+        seen = list(state.get(key, []))
         for ob in data.get(f"{key}OB", []):
             ts = ob.get("ts")
-            if not ts:
+            if not ts or ts in seen:
                 continue
-            new_state[key].append(ts)
-            if ts not in state[key] and not first_run:
-                if not price_loaded:
-                    price = get_price()
-                    price_loaded = True
-                below, above = nearest(data, price)
-                when = datetime.fromtimestamp(ts / 1000, PH_TZ)
-                price_txt = f"{price:,.1f}" if price else "n/a"
-                title = f"{icon} New {label} OB Alert (BTC 4H)"
-                body = (
-                    f"Price: {price_txt}\n"
-                    f"Time: {when.strftime('%Y-%m-%d %H:%M')} PST\n"
-                    f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %H:%M')} PST\n"
-                    "Trade responsibly by Rouie"
-                )
-                print(title)
-                print(body)
-                send_push(title, body)
+            seen.append(ts)
+            if first_run:
+                continue
+            if now_ms - ts > max_age_ms:
+                print("Skipped old block:", key, ts)
+                continue
+            if not price_loaded:
+                price = get_price()
+                price_loaded = True
+            when = datetime.fromtimestamp(ts / 1000, PH_TZ)
+            price_txt = f"{price:,.1f}" if price else "n/a"
+            title = f"{icon} New {label} OB Alert (BTC 4H)"
+            body = (
+                f"Price: {price_txt}\n"
+                f"Time: {when.strftime('%Y-%m-%d %H:%M')} PHT\n"
+                f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %H:%M')} PHT\n"
+                "Trade responsibly by Rouie"
+            )
+            print(title)
+            print(body)
+            send_push(title, body)
+        new_state[key] = seen[-MAX_KEEP:]
 
     save_state(new_state)
 
