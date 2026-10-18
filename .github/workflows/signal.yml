@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
-      - run: python signal.py
+      - run: python signal_4h.py
         env:
           COINANK_API_KEY: ${{ secrets.COINANK_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
