@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 import requests
 from datetime import datetime, timezone
 
@@ -12,6 +11,8 @@ STATE_FILE = "seen.json"
 HEADERS = {"apikey": API_KEY}
 SMC_URL = "https://open-api.coinank.com/api/indicator/smc"
 PUSH_URL = "https://open-api.coinank.com/api/webhook/push"
+
+PCT_KEYS = ("percent", "pct", "ratio", "volPercent", "volumePercent", "strength", "score")
 
 
 def get_smc_data():
@@ -27,8 +28,21 @@ def get_smc_data():
     return None
 
 
+def get_price():
+    for base in ("https://data-api.binance.vision", "https://api.binance.com"):
+        try:
+            r = requests.get(
+                f"{base}/api/v3/ticker/price",
+                params={"symbol": SYMBOL},
+                timeout=10,
+            )
+            return float(r.json()["price"])
+        except Exception as e:
+            print("Price failed:", base, e)
+    return None
+
+
 def send_push(title, body):
-    # CoinAnk app push
     payload = {"title": title, "body": body, "sound": "1"}
     try:
         res = requests.post(PUSH_URL, headers=HEADERS, json=payload, timeout=10)
@@ -36,7 +50,6 @@ def send_push(title, body):
     except Exception as e:
         print("Push failed:", e)
 
-    # Telegram push
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if token and chat_id:
@@ -51,12 +64,37 @@ def send_push(title, body):
             print("Telegram failed:", e)
 
 
-def strength(ob):
-    high, low = ob.get("h", 0), ob.get("l", 0)
-    if high == low:
-        return 0
-    body = abs(ob.get("c", 0) - ob.get("o", 0))
-    return round(body / (high - low) * 100, 1)
+def ob_pct(ob):
+    if not ob:
+        return "n/a"
+    for k in PCT_KEYS:
+        v = ob.get(k)
+        if isinstance(v, (int, float)):
+            return f"{v:g}%"
+    return "n/a"
+
+
+def is_active(ob):
+    for k in ("mitigated", "isMitigated", "filled", "broken"):
+        if ob.get(k):
+            return False
+    return True
+
+
+def nearest(data, price):
+    if price is None:
+        return None, None
+    below = [
+        o for o in data.get("bullishOB", [])
+        if is_active(o) and o.get("h", 0) <= price
+    ]
+    above = [
+        o for o in data.get("bearishOB", [])
+        if is_active(o) and o.get("l", 0) >= price
+    ]
+    b = max(below, key=lambda o: o["h"], default=None)
+    a = min(above, key=lambda o: o["l"], default=None)
+    return b, a
 
 
 def load_state():
@@ -76,12 +114,23 @@ def main():
     if not data:
         return
 
+    # DEBUG: shows what fields CoinAnk returns (remove later)
+    print("DEBUG keys:", list(data.keys()))
+    for key in ("bullishOB", "bearishOB"):
+        items = data.get(key, [])
+        print("DEBUG", key, "count:", len(items))
+        if items:
+            print("DEBUG first:", json.dumps(items[0]))
+            print("DEBUG last:", json.dumps(items[-1]))
+
     state = load_state()
     first_run = state is None
     if first_run:
         state = {"bullish": [], "bearish": []}
 
     new_state = {"bullish": [], "bearish": []}
+    price = None
+    price_loaded = False
 
     for key, icon, label in (
         ("bullish", "🟢", "Bullish"),
@@ -93,13 +142,18 @@ def main():
                 continue
             new_state[key].append(ts)
             if ts not in state[key] and not first_run:
+                if not price_loaded:
+                    price = get_price()
+                    price_loaded = True
+                below, above = nearest(data, price)
                 when = datetime.fromtimestamp(ts / 1000, timezone.utc)
-                title = f"{icon} New {label} Order Block (BTC 4H)"
+                price_txt = f"{price:,.1f}" if price else "n/a"
+                title = f"{icon} New {label} OB Alert (BTC 4H)"
                 body = (
-                    f"High: {ob.get('h')}\n"
-                    f"Low: {ob.get('l')}\n"
-                    f"Strength: {strength(ob)}%\n"
-                    f"Time: {when.strftime('%Y-%m-%d %H:%M')} UTC"
+                    f"Price: {price_txt}\n"
+                    f"Strength: {ob_pct(ob)}\n"
+                    f"Time: {when.strftime('%Y-%m-%d %H:%M')} UTC\n"
+                    f"Nearby: OB below {ob_pct(below)} | OB above {ob_pct(above)}"
                 )
                 print(title)
                 print(body)
