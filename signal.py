@@ -154,6 +154,7 @@ def main():
                     f"Price: {price_txt}\n"
                     f"Strength: {ob_pct(ob)}\n"
                     f"Time: {when.strftime('%Y-%m-%d %H:%M')} PST\n"
+                    f"Sent: {datetime.now(PH_TZ).strftime('%Y-%m-%d %H:%M')} PST\n"
                     "Trade responsibly by Rouie"
                 )
                 print(title)
