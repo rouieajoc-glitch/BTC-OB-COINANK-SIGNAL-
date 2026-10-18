@@ -6,7 +6,8 @@ from datetime import datetime, timezone, timedelta
 API_KEY = os.environ["COINANK_API_KEY"]
 SYMBOL = "BTCUSDT"
 INTERVAL = "4h"
-STATE_FILE = "seen.json"PH_TZ = timezone(timedelta(hours=8))
+STATE_FILE = "seen.json"
+PH_TZ = timezone(timedelta(hours=8))
 
 HEADERS = {"apikey": API_KEY}
 SMC_URL = "https://open-api.coinank.com/api/indicator/smc"
