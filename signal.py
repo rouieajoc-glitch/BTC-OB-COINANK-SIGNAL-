@@ -155,7 +155,6 @@ def main():
                     f"Time: {when.strftime('%Y-%m-%d %H:%M')} UTC\n"
                     "Trade responsibly by Rouie"
                 )
-                )
                 print(title)
                 print(body)
                 send_push(title, body)
