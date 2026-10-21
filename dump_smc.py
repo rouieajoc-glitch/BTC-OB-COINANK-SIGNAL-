@@ -1,14 +1,17 @@
-import os, json, requests
-r = requests.get(
+import os, requests
+from datetime import datetime, timezone
+
+d = requests.get(
     "https://open-api.coinank.com/api/indicator/smc",
     headers={"apikey": os.environ["COINANK_API_KEY"]},
     params={"symbol": "BTCUSDT", "interval": "4h", "exchange": "Binance"},
     timeout=10,
-).json()
-d = r["data"]
-print("KEYS:", list(d.keys()))
-for k, v in d.items():
-    if isinstance(v, list):
-        print(k, len(v), json.dumps(v[-4:], indent=1))
-    else:
-        print(k, json.dumps(v)[:300])
+).json()["data"]
+
+def t(ms):
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%m-%d %H:%M")
+
+for k in ("swingHighs", "swingLows"):
+    print(k)
+    for s in d[k][-25:]:
+        print(t(s["ts"]), s["price"])
