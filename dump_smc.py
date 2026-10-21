@@ -11,7 +11,8 @@ d = requests.get(
 def t(ms):
     return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%m-%d %H:%M")
 
-for k in ("swingHighs", "swingLows"):
+for k, n in (("bearishOB", 14), ("bullishOB", 14),
+             ("breakerBearish", 8), ("breakerBullish", 8)):
     print(k)
-    for s in d[k][-25:]:
-        print(t(s["ts"]), s["price"])
+    for o in d[k][-n:]:
+        print(t(o["ts"]), "h", o["h"], "l", o["l"])
